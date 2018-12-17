@@ -10,9 +10,55 @@ import (
 	"strconv"
 )
 
-type shift struct {
-	guardID int
-	asleep  []int
+type guards map[int]minutes
+
+func (g guards) mostAsleep() (guard int, count int) {
+	var maxMinutes int
+	var maxGuard int
+	for guard, minutes := range g {
+		if len(minutes) > maxMinutes {
+			maxMinutes = len(minutes)
+			maxGuard = guard
+		}
+	}
+
+	return maxGuard, maxMinutes
+}
+
+func (g guards) mostAsleepDuringSameMinute() (guard int, minute int, count int) {
+	var maxGuard int
+	var maxMinute int
+	var maxCount int
+	for guard, minutes := range g {
+		minute, count := minutes.mostFrequent()
+		if count > maxCount {
+			maxCount = count
+			maxMinute = minute
+			maxGuard = guard
+		}
+	}
+
+	return maxGuard, maxMinute, maxCount
+}
+
+type minutes []int
+
+func (m minutes) mostFrequent() (minute int, count int) {
+	f := make(map[int]int)
+	for _, minute := range m {
+		f[minute]++
+	}
+
+	var maxMinute int
+	var maxCount int
+	for minute, count := range f {
+		if count > maxCount {
+			maxCount = count
+			maxMinute = minute
+		}
+	}
+
+	return maxMinute, maxCount
 }
 
 func main() {
@@ -21,17 +67,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ss, err := shifts(lines)
-	if err != nil {
-		log.Fatal(err)
-	}
+	guards := toGuards(lines)
 
-	guard := mostAsleepGuard(ss)
-	minute := mostMinuteAsleep(guard, ss)
-	fmt.Println("Strategy 1: ", guard*minute)
+	guard, _ := guards.mostAsleep()
+	minute, _ := guards[guard].mostFrequent()
+	fmt.Println("Strategy 1:", guard, minute, guard*minute)
 
-	guard, minute = mostSameMinuteAsleep(ss)
-	fmt.Println("Strategy 2: ", guard*minute)
+	guard, minute, count := guards.mostAsleepDuringSameMinute()
+	fmt.Println("Strategy 2:", guard, minute, count, guard*minute)
 }
 
 func readLines(path string) ([]string, error) {
@@ -52,13 +95,13 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-var dateAndAction = regexp.MustCompile(`^\[.+ .+:(.+)] (.+)$`)
+var dateAndAction = regexp.MustCompile(`^\[.+:(.+)] (.+)$`)
 var guardAction = regexp.MustCompile(`Guard #(.+) begins shift`)
 
-func shifts(lines []string) ([]shift, error) {
-	out := make([]shift, 0)
-	var s shift
-	var start, stop int
+func toGuards(lines []string) guards {
+	asleep := make(map[int]minutes)
+	var guard int
+	var start int
 
 	for _, line := range lines {
 
@@ -71,84 +114,22 @@ func shifts(lines []string) ([]shift, error) {
 
 		switch {
 		case len(guardMatches) > 0: // new shift
-			if s.guardID != 0 {
-				out = append(out, s)
-			}
-			guardID, _ := strconv.Atoi(guardMatches[1])
-			s = shift{
-				guardID: guardID,
-			}
+			guard, _ = strconv.Atoi(guardMatches[1])
 		case action == "falls asleep":
 			start, _ = strconv.Atoi(minute)
 		case action == "wakes up":
-			stop, _ = strconv.Atoi(minute)
-			// Fill the asleep slice with the minutes during which the guard was asleep
+			stop, _ := strconv.Atoi(minute)
+			_, ok := asleep[guard]
+			if !ok {
+				asleep[guard] = make([]int, 0)
+			}
+			// Fill the minutes during which the guard was asleep
 			for i := 0; stop > start; i++ {
-				s.asleep = append(s.asleep, start)
+				asleep[guard] = append(asleep[guard], start)
 				start++
 			}
 		}
 	}
 
-	return out, nil
-}
-
-func mostAsleepGuard(ss []shift) int {
-	freq := make(map[interface{}]int) // map of guardID to minutes asleep
-
-	for _, s := range ss {
-		freq[s.guardID] += len(s.asleep)
-	}
-
-	k, _ := max(freq)
-	return k.(int)
-}
-
-func mostMinuteAsleep(guard int, ss []shift) int {
-	freq := make(map[interface{}]int) // map of minute number to number of times the guard was asleep during it
-
-	for _, s := range ss {
-		if s.guardID != guard {
-			continue
-		}
-		for _, minute := range s.asleep {
-			freq[minute]++
-		}
-	}
-
-	k, _ := max(freq)
-	return k.(int)
-}
-
-func mostSameMinuteAsleep(ss []shift) (int, int) {
-	freq := make(map[int]map[interface{}]int) // (map of guard ID to (map of minute to (number of times the guard was asleep during it)))
-
-	for _, s := range ss {
-		c, ok := freq[s.guardID]
-		if !ok {
-			c = make(map[interface{}]int)
-		}
-		for _, minute := range s.asleep {
-			c[minute]++
-		}
-		freq[s.guardID] = c
-	}
-
-	type guardMinute struct {
-		guardID int
-		minute  int
-	}
-
-	f := make(map[interface{}]int)
-	for guardID, minutes := range freq {
-		bestMinute, maxCount := max(minutes)
-		if bestMinute == nil {
-			continue
-		}
-		f[guardMinute{guardID, bestMinute.(int)}] = maxCount
-	}
-
-	bestGuard, _ := max(f)
-
-	return bestGuard.(guardMinute).guardID, bestGuard.(guardMinute).minute
+	return asleep
 }
