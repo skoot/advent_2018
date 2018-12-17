@@ -94,17 +94,18 @@ func shifts(lines []string) ([]shift, error) {
 }
 
 func mostAsleepGuard(ss []shift) int {
-	freq := make(map[int]int) // map of guardID to minutes asleep
+	freq := make(map[interface{}]int) // map of guardID to minutes asleep
 
 	for _, s := range ss {
 		freq[s.guardID] += len(s.asleep)
 	}
 
-	return max(freq)
+	k, _ := max(freq)
+	return k.(int)
 }
 
 func mostMinuteAsleep(guard int, ss []shift) int {
-	freq := make(map[int]int) // map of minute number to number of times the guard was asleep during it
+	freq := make(map[interface{}]int) // map of minute number to number of times the guard was asleep during it
 
 	for _, s := range ss {
 		if s.guardID != guard {
@@ -115,34 +116,17 @@ func mostMinuteAsleep(guard int, ss []shift) int {
 		}
 	}
 
-	return max(freq)
-}
-
-// max returns the key of the provided map that has the highest value
-func max(freq map[int]int) int {
-	var max, out int
-	for item, count := range freq {
-		if count > max {
-			max = count
-			out = item
-		}
-	}
-	return out
-}
-
-type stat struct {
-	guardID int
-	minute  int
-	count   int
+	k, _ := max(freq)
+	return k.(int)
 }
 
 func mostSameMinuteAsleep(ss []shift) (int, int) {
-	freq := make(map[int]map[int]int) // (map of guard ID to (map of minute to (number of times the guard was asleep during it)))
+	freq := make(map[int]map[interface{}]int) // (map of guard ID to (map of minute to (number of times the guard was asleep during it)))
 
 	for _, s := range ss {
 		c, ok := freq[s.guardID]
 		if !ok {
-			c = make(map[int]int)
+			c = make(map[interface{}]int)
 		}
 		for _, minute := range s.asleep {
 			c[minute]++
@@ -150,31 +134,21 @@ func mostSameMinuteAsleep(ss []shift) (int, int) {
 		freq[s.guardID] = c
 	}
 
-	stats := make([]stat, 0, len(freq))
-	for guardID, f := range freq {
-		var max int
-		var out int
-		for minute, count := range f {
-			if count > max {
-				max = count
-				out = minute
-			}
-		}
-		stats = append(stats, stat{
-			guardID: guardID,
-			minute:  out,
-			count:   max,
-		})
+	type guardMinute struct {
+		guardID int
+		minute  int
 	}
 
-	var max int
-	var out stat
-	for _, s := range stats {
-		if s.count > max {
-			max = s.count
-			out = s
+	f := make(map[interface{}]int)
+	for guardID, minutes := range freq {
+		bestMinute, maxCount := max(minutes)
+		if bestMinute == nil {
+			continue
 		}
+		f[guardMinute{guardID, bestMinute.(int)}] = maxCount
 	}
 
-	return out.guardID, out.minute
+	bestGuard, _ := max(f)
+
+	return bestGuard.(guardMinute).guardID, bestGuard.(guardMinute).minute
 }
