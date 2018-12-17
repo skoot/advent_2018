@@ -16,8 +16,9 @@ func (g guards) mostAsleep() (guard int, count int) {
 	var maxMinutes int
 	var maxGuard int
 	for guard, minutes := range g {
-		if len(minutes) > maxMinutes {
-			maxMinutes = len(minutes)
+		total := minutes.total()
+		if total > maxMinutes {
+			maxMinutes = total
 			maxGuard = guard
 		}
 	}
@@ -41,17 +42,12 @@ func (g guards) mostAsleepDuringSameMinute() (guard int, minute int, count int) 
 	return maxGuard, maxMinute, maxCount
 }
 
-type minutes []int
+type minutes map[int]int
 
 func (m minutes) mostFrequent() (minute int, count int) {
-	f := make(map[int]int)
-	for _, minute := range m {
-		f[minute]++
-	}
-
 	var maxMinute int
 	var maxCount int
-	for minute, count := range f {
+	for minute, count := range m {
 		if count > maxCount {
 			maxCount = count
 			maxMinute = minute
@@ -59,6 +55,15 @@ func (m minutes) mostFrequent() (minute int, count int) {
 	}
 
 	return maxMinute, maxCount
+}
+
+func (m minutes) total() int {
+	var total int
+	for _, count := range m {
+		total += count
+	}
+
+	return total
 }
 
 func main() {
@@ -121,12 +126,11 @@ func toGuards(lines []string) guards {
 			stop, _ := strconv.Atoi(minute)
 			_, ok := asleep[guard]
 			if !ok {
-				asleep[guard] = make([]int, 0)
+				asleep[guard] = make(map[int]int)
 			}
-			// Fill the minutes during which the guard was asleep
-			for i := 0; stop > start; i++ {
-				asleep[guard] = append(asleep[guard], start)
-				start++
+			// Update the counter of the minutes during which the guard was asleep
+			for i := start; stop > i; i++ {
+				asleep[guard][i]++
 			}
 		}
 	}
