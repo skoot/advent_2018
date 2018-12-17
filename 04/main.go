@@ -88,12 +88,18 @@ func main() {
 
 	guards := newGuards(lines)
 
-	guard, _ := guards.mostAsleep()
-	minute, _ := guards[guard].mostFrequent()
-	fmt.Println("Strategy 1:", guard, minute, guard*minute)
+	guard, sleep := guards.mostAsleep()
+	minute, times := guards[guard].mostFrequent()
+	fmt.Println("Strategy 1:")
+	fmt.Printf("Guard #%d slept the most with %d minutes of sleep.\n", guard, sleep)
+	fmt.Printf("He was the most asleep during minute #%d (%d times).\n", minute, times)
+	fmt.Printf("The solution to the first phase is %d * %d = %d.\n\n", guard, minute, guard*minute)
 
 	guard, minute, count := guards.mostAsleepDuringSameMinute()
-	fmt.Println("Strategy 2:", guard, minute, count, guard*minute)
+	fmt.Println("Strategy 2:")
+	fmt.Printf("Minute #%d is the one during which a guard was asleep the most (%d times).\n", minute, count)
+	fmt.Printf("That guard is #%d.\n", guard)
+	fmt.Printf("The solution to the second phase is %d * %d = %d.\n", guard, minute, guard*minute)
 }
 
 func readLines(path string) ([]string, error) {
