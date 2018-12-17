@@ -4,34 +4,32 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_toGuards(t *testing.T) {
-	lines := []string{
-		`[x:00] Guard #1 begins shift`,
-		`[x:10] falls asleep`,
-		`[x:12] wakes up`,
-		`[x:09] Guard #2 begins shift`,
-		`[x:20] falls asleep`,
-		`[x:22] wakes up`,
-		`[x:53] Guard #1 begins shift`,
-		`[x:10] falls asleep`,
-		`[x:13] wakes up`,
-	}
-	g := toGuards(lines)
-	assert.Equal(t, guards{
-		1: []int{10, 11, 10, 11, 12},
-		2: []int{20, 21},
-	}, g)
+func TestStrategy1(t *testing.T) {
+	lines, err := readLines("input.txt")
+	require.NoError(t, err)
+
+	guards := newGuards(lines)
+
+	guard, count := guards.mostAsleep()
+	assert.Equal(t, 3457, guard)
+	assert.Equal(t, 504, count)
+
+	minute, count := guards[guard].mostFrequent()
+	assert.Equal(t, 40, minute)
+	assert.Equal(t, 14, count)
 }
 
-func Test_guards_mostAsleep(t *testing.T) {
-	g := guards{
-		1: []int{10, 11, 10, 11, 12},
-		2: []int{20, 21},
-	}
+func TestStrategy2(t *testing.T) {
+	lines, err := readLines("input.txt")
+	require.NoError(t, err)
 
-	guardID, nbMinutes := g.mostAsleep()
-	assert.Equal(t, 1, guardID)
-	assert.Equal(t, 5, nbMinutes)
+	guards := newGuards(lines)
+
+	guard, minute, count := guards.mostAsleepDuringSameMinute()
+	assert.Equal(t, 1901, guard)
+	assert.Equal(t, 47, minute)
+	assert.Equal(t, 19, count)
 }

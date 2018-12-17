@@ -12,6 +12,20 @@ import (
 
 type guards map[int]minutes
 
+var dateAndAction = regexp.MustCompile(`^\[.+:(.+)] (.+)$`)
+var guardAction = regexp.MustCompile(`Guard #(.+) begins shift`)
+
+func (g guards) addSleep(guard int, start, stop int) {
+	_, ok := g[guard]
+	if !ok {
+		g[guard] = make(map[int]int)
+	}
+	// Update the counter of the minutes during which the guard was asleep
+	for i := start; stop > i; i++ {
+		g[guard][i]++
+	}
+}
+
 func (g guards) mostAsleep() (guard int, count int) {
 	var maxMinutes int
 	var maxGuard int
@@ -72,7 +86,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	guards := toGuards(lines)
+	guards := newGuards(lines)
 
 	guard, _ := guards.mostAsleep()
 	minute, _ := guards[guard].mostFrequent()
@@ -100,13 +114,9 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-var dateAndAction = regexp.MustCompile(`^\[.+:(.+)] (.+)$`)
-var guardAction = regexp.MustCompile(`Guard #(.+) begins shift`)
-
-func toGuards(lines []string) guards {
-	asleep := make(map[int]minutes)
-	var guard int
-	var start int
+func newGuards(lines []string) guards {
+	g := make(guards)
+	var currentGuard, start int
 
 	for _, line := range lines {
 
@@ -119,21 +129,14 @@ func toGuards(lines []string) guards {
 
 		switch {
 		case len(guardMatches) > 0: // new shift
-			guard, _ = strconv.Atoi(guardMatches[1])
+			currentGuard, _ = strconv.Atoi(guardMatches[1])
 		case action == "falls asleep":
 			start, _ = strconv.Atoi(minute)
 		case action == "wakes up":
 			stop, _ := strconv.Atoi(minute)
-			_, ok := asleep[guard]
-			if !ok {
-				asleep[guard] = make(map[int]int)
-			}
-			// Update the counter of the minutes during which the guard was asleep
-			for i := start; stop > i; i++ {
-				asleep[guard][i]++
-			}
+			g.addSleep(currentGuard, start, stop)
 		}
 	}
 
-	return asleep
+	return g
 }
