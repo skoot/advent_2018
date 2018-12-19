@@ -1,38 +1,22 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/skoot/advent_2018/file"
 )
 
 func main() {
-	input, err := readLines("input.txt")
+	input, err := file.ReadLines("input.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("Phase 1:", total(input))
 	fmt.Println("Phase 2:", findDuplicate(input))
-}
-
-func readLines(path string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = file.Close() }()
-
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	return lines, scanner.Err()
 }
 
 func total(changes []string) int {
